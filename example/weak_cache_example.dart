@@ -1,8 +1,12 @@
 import 'dart:async';
 
+import 'package:weak_cache/src/debug.dart' show kDebug;
 import 'package:weak_cache/weak_cache.dart';
 
-void main() {
+
+Future<void> main() async {
+  kDebug = true;
+
   // Create cache
   final cache = WeakCache<int, Object>();
 
@@ -10,41 +14,73 @@ void main() {
   Object? someObject = Object();
   Object? someObject2 = Object();
 
+  final someObjectRef =  WeakReference(someObject);
+  final someObject2Ref =  WeakReference(someObject2);
+
   // Add them to cache
   cache[0] = someObject;
   cache[1] = someObject2;
 
   // Check they are in the cache
-  print('someObject and cache[0] are the same: ${cache[0] == someObject}');
+  assert(identical(cache[0], someObject), 'Cached object must be identical');
+  assert(identical(cache[1], someObject2), 'Cached object must be identical');
 
-  bool firstGC = false;
-  bool secondGC = false;
+  // Track to not repeat print's messages
+  var messageRef1Shown = false;
+  var messageCache1Shown = false;
+  var messageRef2Shown = false;
+  var messageCache2Shown = false;
 
-  // Wait until they will be GC'd.
-  Timer.periodic(Duration(seconds: 1), (timer) {
-    // Won't be GC'd while someObject2 (cache[2]) is alive, because
-    // `if` after this one holds strong reference to someObject until it's nulled.
-    if (cache[0] == null && firstGC == false) {
-      print('Some object 1 has been garbage collected by that time.');
-      firstGC = true;
+  // Remove last reference to the first object
+  someObject = null;
+
+  while (true) {
+    // 1st ref
+    if (someObjectRef.target == null && !messageRef1Shown) {
+      print('Object 1 is garbage collected.');
+      messageRef1Shown = true;
     }
 
-    // Remove last reference to first object by nulling someObject variable.
-    if (cache[1] == null && secondGC == false) {
-      print('Some object 2 has been garbage collected by that time, let\'s trash first one.');
-      someObject = null;
-      secondGC = true;
+    // 1st cache
+    if (cache[0] == null && !messageCache1Shown) {
+      print('Object 1 is no longer in cache.');
+      messageCache1Shown = true;
     }
 
-    // Exit when cache is empty.
-    if (cache.isEmpty) {
-      timer.cancel();
+    // 2nd ref
+    if (someObject2Ref.target == null && !messageRef2Shown) {
+      print('Object 2 is garbage collected.');
+      messageRef2Shown = true;
     }
+
+    // 2nd cache
+    if (cache[1] == null && !messageCache2Shown) {
+      print('Object 2 is no longer in cache.');
+      messageCache2Shown = true;
+    }
+
+    // 1st object is now destroyed, so we can destroy the 2nd
+    if (messageRef1Shown && messageCache1Shown) {
+      someObject2 = null;
+    }
+
+    assert(
+      messageRef1Shown == messageCache1Shown && messageRef2Shown == messageCache2Shown,
+      'cache and weak reference in default conditions should be cleaned at the same time',
+    );
+
+    assert(
+      (messageRef1Shown && messageRef2Shown && messageCache1Shown && messageCache2Shown) == cache.isEmpty,
+      'cache should be empty when both object are destroyed',
+    );
+
+    if (cache.isEmpty)
+      break;
 
     // Feed memory until we GC both objects.
-    if (!(firstGC && secondGC)) {
-      print('Feed memory to force GC');
-      String bigChunkOfData = '0' * 1024 * 1024 * 5; // about 5mb of data.
-    }
-  });
+    print('Feed memory to force GC');
+    // ignore: unused_local_variable
+    final bigChunkOfData = '0' * 1024 * 1024 * 5; // about 5mb of data.
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+  }
 }
