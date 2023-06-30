@@ -4,4 +4,4 @@
 /// usage and remove it when it's no longer accessible.
 library weak_cache;
 
-export 'src/weak_cache.dart';
+export 'src/weak_cache.dart' show WeakCache;
