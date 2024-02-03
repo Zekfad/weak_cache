@@ -24,6 +24,9 @@ Future<void> main(List<String> args) async {
     },
   ).ignore();
 
+  // Add delay if you want to see that objects were deleted before iteration
+  // could hold them.
+  // await Future<void>.delayed(const Duration(seconds: 1));
 
   for (final MapEntry(:key, :value) in cache.entries) {
     print('$key = $value');

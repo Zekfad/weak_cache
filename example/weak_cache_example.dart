@@ -30,6 +30,8 @@ Future<void> main() async {
   var messageCache1Shown = false;
   var messageRef2Shown = false;
   var messageCache2Shown = false;
+  var messageCacheEmptyShown = false;
+  var messageCacheFinalizerShown = false;
 
   // Remove last reference to the first object
   someObject = null;
@@ -69,10 +71,17 @@ Future<void> main() async {
       'cache and weak reference in default conditions should be cleaned at the same time',
     );
 
-    assert(
-      (messageRef1Shown && messageRef2Shown && messageCache1Shown && messageCache2Shown) == cache.isEmpty,
-      'cache should be empty when both object are destroyed',
-    );
+    if (messageRef1Shown && messageRef2Shown && messageCache1Shown && messageCache2Shown) {
+      if (cache.isNotEmpty && !messageCacheFinalizerShown) {
+        print('Finalizer is not yet executed, cache still contains nulled weak references');
+        messageCacheFinalizerShown = true;
+      }
+      if (cache.isEmpty && !messageCacheEmptyShown) {
+        print('Cache is now empty.');
+        messageCacheEmptyShown = true;
+      }
+    }
+
 
     if (cache.isEmpty)
       break;
