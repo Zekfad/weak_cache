@@ -1,3 +1,10 @@
+## 2.0.1
+
+- Remove dependency on [`package:disposed`](https://pub.dev/packages/disposed).
+- Fix "leak" of nulled Weak references, if objects where added while iterating.
+  > Generally you should not modify cache while iterating it, but this is
+  > technically possible.
+
 ## 2.0.0
 
 - Requires Dart 3.0.0
