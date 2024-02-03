@@ -15,14 +15,20 @@ typedef CacheStateSnapshot<K, V extends Object> = ({
 typedef CacheStateSnapshotWithReference<K, V extends Object> = ({
   CacheStateSnapshot<K, V> snapshot,
   WeakReference<V> reference,
-  bool isLocked,
+  CacheMutex? mutex,
 });
 
 /// Weak cache state, including locks, storage, concurrent modification
 /// delayed queue and expando for `containsValue` optimization.
+/// 
+/// [add] and [remove] methods do not use [mutex] because of single threaded
+/// nature of event loop.
 class CacheState<K, V extends Object> {
+  /// Create new state.
+  CacheState(this.mutex);
+
   /// Mutex providing concurrent modification lock.
-  final mutex = CacheMutex();
+  final CacheMutex mutex;
   /// Actual storage of weak references.
   final cache = <K, WeakReference<V>>{};
   /// Queue for delayed concurrent modifications.
@@ -44,9 +50,9 @@ class CacheState<K, V extends Object> {
     final (
       snapshot: CacheStateSnapshot(:removeQueue),
       :reference,
-      :isLocked,
+      :mutex,
     ) = argument;
-    if (!isLocked)
+    if (mutex?.isLocked != true)
       return removeCacheEntryStatic(argument);
     removeQueue.addLast(reference);
   }
@@ -60,7 +66,7 @@ class CacheState<K, V extends Object> {
       :reference,
     ) = argument;
     cacheFinalizer.detach(reference);
-   if (reference.target case final target?)
+    if (reference.target case final target?)
       containsExpando[target] = null;
     cache.removeWhere((key, value) => value == reference);
   }
@@ -76,7 +82,7 @@ class CacheState<K, V extends Object> {
   CacheStateSnapshotWithReference<K, V> makeSnapshotWithReference(
     WeakReference<V> reference,
   ) => (
-    isLocked: mutex.isLocked,
+    mutex: mutex,
     snapshot: snapshot,
     reference: reference,
   );
@@ -114,9 +120,6 @@ class CacheState<K, V extends Object> {
 
   /// Detach all values from [cacheFinalizer] and clear [cache].
   void clear() {
-    // for (final reference in cache.values) {
-    //   cacheFinalizer.detach(reference);
-    // }
     cache.values.forEach(cacheFinalizer.detach);
     cache.clear();
   }

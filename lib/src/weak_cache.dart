@@ -2,9 +2,9 @@ import 'dart:collection';
 
 import 'package:meta/meta.dart';
 
+import 'cache_mutex.dart';
 import 'cache_state.dart';
 import 'cache_strong_snapshot.dart';
-import 'debug.dart';
 
 
 /// Weak cache that uses weak references for holding values.
@@ -25,32 +25,28 @@ class WeakCache<K, V extends Object> with MapBase<K, V> implements Map<K, V> {
       V == Null
     )
       throw ArgumentError.value(V, 'Invalid type for values');
-    _state.mutex.stream.listen(
-      _createStreamListener(this._state.snapshot),
-      onDone: !kDebug ? null : () {
-        debugPrint('Mutex stream closed.');
-      },
-    );
   }
 
-  static void Function(bool) _createStreamListener<K, V extends Object>(
+  /// Clear remove queue when state mutex unlocks.
+  static void _onMutexUnlock<K, V extends Object>(
     CacheStateSnapshot<K, V> stateSnapshot,
-  ) =>
-    (isLocked) {
-      if (!isLocked) {
-        final CacheStateSnapshot(:removeQueue) = stateSnapshot;
-        while (removeQueue.isNotEmpty)
-          CacheState.removeCacheEntryStatic(
-            (
-              snapshot: stateSnapshot,
-              isLocked: false,
-              reference: removeQueue.removeLast(),
-            ),
-          );
-      }
-    };
+  ) {
+    final CacheStateSnapshot(:removeQueue) = stateSnapshot;
+    while (removeQueue.isNotEmpty)
+      CacheState.removeCacheEntryStatic(
+        (
+          mutex: null,
+          snapshot: stateSnapshot,
+          reference: removeQueue.removeLast(),
+        ),
+      );
+  }
 
-  final _state = CacheState<K, V>(); 
+  late final _state = CacheState<K, V>(
+    CacheMutex(onUnlock: () => _onMutexUnlock(_stateSnapshot)),
+  ); 
+
+  CacheStateSnapshot<K, V> get _stateSnapshot => _state.snapshot;
 
   @Deprecated(
     'Do not use cache directly, as it can change at any time and likely '

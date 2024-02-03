@@ -1,20 +1,19 @@
-import 'dart:async';
-
-import 'package:disposed/disposed.dart';
-
 import 'debug.dart';
 
-
 /// Cache mutex that provides lock mechanism for delaying 
-/// concurrent modification.
-class CacheMutex extends DisposableContainer {
-  @override
-  List<Disposable> get disposables => [ _controller, ];
+/// concurrent modification (deletion of entries due to GC).
+class CacheMutex {
+  /// Create new mutex.
+  CacheMutex({
+    this.onLock,
+    this.onUnlock,
+  });
 
-  /// Controller for [stream] of locked states.
-  final _controller = DisposableStreamController(
-    StreamController<bool>(),
-  );
+  /// Lock callback.
+  final void Function()? onLock;
+
+  /// Unlock callback.
+  final void Function()? onUnlock;
 
   /// Current locks count.
   var _locksCount = 0;
@@ -22,22 +21,22 @@ class CacheMutex extends DisposableContainer {
   /// Whether mutex is locked.
   bool get isLocked => _locksCount > 0;
 
-  /// Stream exposing changes in [isLocked].
-  Stream<bool> get stream => _controller.controller.stream;
-
-  /// Lock mutex and announce change via [stream].
+  /// Lock mutex.
   void lock() {
-    debugPrint('CacheMutex.lock (was $_locksCount)');
+    debugPrint('CacheMutex.lock ($_locksCount + 1)');
     _locksCount++;
-    _controller.controller.add(isLocked);
+    if (_locksCount == 1)
+      onLock?.call();
   }
 
-  /// Unlock mutex and announce change via [stream].
+  /// Unlock mutex.
   void unlock() {
-    debugPrint('CacheMutex.unlock (was $_locksCount)');
-    if (isLocked) {
-      _locksCount--;
-      _controller.controller.add(isLocked);
-    }
+    debugPrint('CacheMutex.unlock ($_locksCount - 1)');
+    if (!isLocked)
+      return;
+
+    _locksCount--;
+    if (_locksCount == 0)
+      onUnlock?.call();
   }
 }
