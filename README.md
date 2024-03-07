@@ -3,9 +3,11 @@
 Weak cache is a `Map` implementation that uses `WeakReference`s for holding
 values and `Finalizer` to manage it's storage.
 
-You can use it to cache data (e.g. API responses) for a small amount of time
-(until next garbage collection cycle).
+You can use it to cache data for a small amount of time until next garbage
+collection cycle.
 
+> Note: Values cannot be numbers, strings, booleans, records, `null`,
+> `dart:ffi` pointers, `dart:ffi` structs, or `dart:ffi` unions.
 
 ## Features
 
@@ -21,8 +23,9 @@ You can use it to cache data (e.g. API responses) for a small amount of time
 
 ## Usage
 
-Just create cache, add some values, and they'll be removed when all other
-strong references to they are lost.
+Create cache, add values, and they'll be removed when all other strong
+references to them are lost.
+
 ```dart
 // ID - Object cache
 final cache = WeakCache<int, Object>();
