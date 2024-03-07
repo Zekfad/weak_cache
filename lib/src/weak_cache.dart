@@ -5,26 +5,25 @@ import 'package:meta/meta.dart';
 import 'cache_mutex.dart';
 import 'cache_state.dart';
 import 'cache_strong_snapshot.dart';
+import 'expando_compatible/expando_compatible.dart';
 
 
 /// Weak cache that uses weak references for holding values.
-/// It's useful in cases when you want to hold an object in cache while it's in
-/// usage and remove it when it's no longer accessible.
 /// 
-/// Values ([V]) must not be a number, a string, a boolean, `null`, a `dart:ffi`
-/// pointer, a `dart:ffi` struct, or a `dart:ffi` union.
+/// You can use it to hold an object in cache while it's in usage, cache will
+/// automatically remove it when it's no longer referenced.
+/// 
+/// Does not work on numbers, strings, booleans, records, `null`, `dart:ffi`
+/// pointers, `dart:ffi` structs, or `dart:ffi` unions.
 class WeakCache<K, V extends Object> with MapBase<K, V> implements Map<K, V> {
   /// Create new weak cache.
   WeakCache() : super() {
-    if (
-      V == num ||
-      V == int ||
-      V == double ||
-      V == String ||
-      V == bool||
-      V == Null
-    )
-      throw ArgumentError.value(V, 'Invalid type for values');
+    if (!expandoCompatible<V>())
+      throw ArgumentError.value(
+        V,
+        'Values type cannot be a string, number, boolean, record, null, '
+        'Pointer, Struct or Union'
+      );
   }
 
   /// Clear remove queue when state mutex unlocks.
