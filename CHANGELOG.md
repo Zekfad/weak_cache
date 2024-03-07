@@ -1,3 +1,8 @@
+## 2.1.0
+
+- Add `weak_cache.utils` library with `expandoCompatible` utility function.
+- Update type check, to correctly detect all disallowed values types.
+
 ## 2.0.1
 
 - Remove dependency on [`package:disposed`](https://pub.dev/packages/disposed).
