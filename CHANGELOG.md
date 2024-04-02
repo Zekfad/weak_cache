@@ -1,3 +1,7 @@
+## 2.1.1
+
+- Fix web release target compilation.
+
 ## 2.1.0
 
 - Add `weak_cache.utils` library with `expandoCompatible` utility function.

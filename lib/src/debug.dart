@@ -6,6 +6,8 @@ bool kDebug = false;
 /// * Direct call to [print] otherwise.
 @pragma('vm:prefer-inline')
 @pragma('dart2js:tryInline')
-final void Function(Object? object) debugPrint = !kDebug
-  ? (object) {}
-  : print; 
+void debugPrint(Object? object) {
+  if (!kDebug)
+    return;
+  print(object);
+}
