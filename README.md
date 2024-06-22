@@ -3,7 +3,7 @@
 Weak cache is a `Map` implementation that uses `WeakReference`s for holding
 values and `Finalizer` to manage it's storage.
 
-You can use it to cache data for a small amount of time until next garbage
+You can use this to cache data for a small amount of time until next garbage
 collection cycle.
 
 > Note: Values cannot be numbers, strings, booleans, records, `null`,
@@ -18,13 +18,13 @@ collection cycle.
   > references, to prevent concurrent edit of storage, while iterating over it.
 * Optimized `containsValue` via internal managed `Expando`.
 * Implements full `Map<K, V>` interface.
-* WeakCache itself can be safely garbage collected and doesn't hold unto any
-  stored.
+* `WeakCache` itself can be safely garbage collected and doesn't hold unto any
+  stored data.
 
 ## Usage
 
-Create cache, add values, and they'll be removed when all other strong
-references to them are lost.
+Create cache, add values, and they'll be removed once there no more strong 
+references to them.
 
 ```dart
 // ID - Object cache

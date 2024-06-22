@@ -11,10 +11,7 @@ Future<void> parallelLoops(
   }
 ) => Future.wait([
   for (final function in functions)
-    Future.doWhile(() async {
-      await Future<void>.delayed(delay);
-      return function();
-    }),
+    Future.doWhile(() async => Future.delayed(delay, function)),
 ]);
 
 class _Int {
@@ -29,6 +26,109 @@ void main() {
   kDebug = true;
 
   group('Test Weak Cache', () {
+    test('updating key should not interfere removal', () async {
+      final events = <String>[];
+
+      final cache = WeakCache<int, Object>();
+
+      // Create some objects
+      Object? someObject = Object();
+      Object? someObject2 = Object();
+      Object? someObject3 = Object();
+
+      final _someObjectRef = WeakReference(someObject);
+      final _someObject2Ref = WeakReference(someObject2);
+      final _someObject3Ref = WeakReference(someObject3);
+
+      // Add them to cache
+      cache[0] = someObject;
+      cache[1] = someObject2;
+
+      final _someObjectRefDone = expectAsync0<bool>(() {
+        events.add('some object');
+        return false;
+      });
+
+      final _someObject2RefDone = expectAsync0<bool>(() {
+        events.add('some object 2');
+        return false;
+      });
+
+      final _someObject3RefDone = expectAsync0<bool>(() {
+        events.add('some object 3');
+        return false;
+      });
+
+      expect(identical(cache[0], someObject), isTrue);
+      expect(identical(cache[0], _someObjectRef.target), isTrue);
+      expect(identical(cache[1], someObject2), isTrue);
+      expect(identical(cache[1], _someObject2Ref.target), isTrue);
+
+      someObject = null;
+      someObject2 = null;
+
+      cache[1] = someObject3;
+
+      expect(identical(cache[1], someObject3), isTrue);
+      expect(identical(cache[1], _someObject3Ref.target), isTrue);
+
+      await parallelLoops([
+        () {
+          // ignore: unused_local_variable
+          final bigChunkOfData = '0' * 1024 * 1024 * 50; // about 50mb of data.
+          if (_someObjectRef.target != null)
+            return true;
+          return _someObjectRefDone();
+        },
+        () {
+          // ignore: unused_local_variable
+          final bigChunkOfData = '0' * 1024 * 1024 * 50; // about 50mb of data.
+          if (_someObject2Ref.target != null)
+            return true;
+          return _someObject2RefDone();
+        },
+      ]);
+
+      // 0 is null
+      expect(cache[0], isNull);
+      expect(_someObjectRef.target, isNull);
+      // 1 is obj3
+      expect(cache[1], isNotNull);
+      expect(identical(cache[1], _someObject3Ref.target), isTrue);
+      // obj2 is deleted
+      expect(_someObject2Ref.target, isNull);
+      expect(
+        events,
+        unorderedEquals([
+          'some object',
+          'some object 2',
+        ]),
+      );
+
+      someObject3 = null;
+
+      await parallelLoops([
+        () {
+          // ignore: unused_local_variable
+          final bigChunkOfData = '0' * 1024 * 1024 * 50; // about 50mb of data.
+          if (_someObject2Ref.target != null)
+            return true;
+          return _someObject3RefDone();
+        },
+      ]);
+
+      expect(cache[1], isNull);
+      expect(_someObject3Ref.target, isNull);
+      expect(
+        events,
+        unorderedEquals([
+          'some object',
+          'some object 2',
+          'some object 3',
+        ]),
+      );
+    });
+
     test('held objects should be garbage collected and removed from cache', () async {
       final events = <String>[];
 

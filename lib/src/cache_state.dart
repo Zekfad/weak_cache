@@ -8,6 +8,7 @@ typedef CacheStateSnapshot<K, V extends Object> = ({
   Map<K, WeakReference<V>> cache,
   ListQueue<WeakReference<V>> removeQueue,
   Expando<bool> containsExpando,
+  Expando<(K,)> referenceKeys,
 });
 
 /// Aggregation of [CacheState] main properties with details
@@ -33,9 +34,11 @@ class CacheState<K, V extends Object> {
   final cache = <K, WeakReference<V>>{};
   /// Queue for delayed concurrent modifications.
   final removeQueue = ListQueue<WeakReference<V>>();
-  /// [Expando] used to optimize `containsValue` calls and bypass using
+  /// [Expando] used to optimize `containsValue` calls and bypass usage
   /// of iteration.
   final containsExpando = Expando<bool>();
+  /// [Expando] used to optimize `remove` calls and bypass usage of iteration.
+  final referenceKeys = Expando<(K,)>();
 
   /// [Finalizer] that manages [cache].
   static final cacheFinalizer = Finalizer<CacheStateSnapshotWithReference<Object?, Object>>(
@@ -54,7 +57,7 @@ class CacheState<K, V extends Object> {
     ) = argument;
     if (mutex?.isLocked != true)
       return removeCacheEntryStatic(argument);
-    removeQueue.addLast(reference);
+    return removeQueue.addLast(reference);
   }
 
   /// Removes cache entry from [cache] table and detach finalizer form it.
@@ -62,13 +65,15 @@ class CacheState<K, V extends Object> {
     CacheStateSnapshotWithReference<K, V> argument,
   ) {
     final CacheStateSnapshotWithReference(
-      snapshot: CacheStateSnapshot(:cache, :containsExpando),
+      snapshot: CacheStateSnapshot(:cache, :containsExpando, :referenceKeys),
       :reference,
     ) = argument;
     cacheFinalizer.detach(reference);
+    if (referenceKeys[reference] case (final key,) when cache[key] == reference)
+      cache.remove(key);
+    referenceKeys[reference] = null;
     if (reference.target case final target?)
       containsExpando[target] = null;
-    cache.removeWhere((key, value) => value == reference);
   }
 
   /// Get aggregation of [CacheState] main properties.
@@ -76,6 +81,7 @@ class CacheState<K, V extends Object> {
     cache: cache,
     removeQueue: removeQueue,
     containsExpando: containsExpando,
+    referenceKeys: referenceKeys,
   );
 
   /// Create aggregation of [CacheState] properties required for value deletion.
@@ -99,6 +105,7 @@ class CacheState<K, V extends Object> {
     }
     containsExpando[value] = true;
     final reference = cache[key] = WeakReference<V>(value);
+    referenceKeys[reference] = (key,);
     cacheFinalizer.attach(
       value,
       makeSnapshotWithReference(reference),
@@ -113,6 +120,7 @@ class CacheState<K, V extends Object> {
       return null;
     }
     cacheFinalizer.detach(reference);
+    referenceKeys[reference] = null;
     if (reference.target case final target?)
       containsExpando[target] = null;
     return reference.target;

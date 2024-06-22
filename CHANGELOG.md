@@ -1,3 +1,10 @@
+## 2.1.2
+
+- Optimize cache entry removal performance.
+  > Previously `removeWhere` was used which caused iteration of whole cache set
+  > on every removal.
+  > Now additional `Expando` is used to map Weak references to their keys.
+
 ## 2.1.1
 
 - Fix web release target compilation.

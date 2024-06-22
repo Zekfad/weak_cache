@@ -24,8 +24,7 @@ class CacheMutex {
   /// Lock mutex.
   void lock() {
     debugPrint('CacheMutex.lock ($_locksCount + 1)');
-    _locksCount++;
-    if (_locksCount == 1)
+    if (++_locksCount == 1)
       onLock?.call();
   }
 
@@ -35,8 +34,7 @@ class CacheMutex {
     if (!isLocked)
       return;
 
-    _locksCount--;
-    if (_locksCount == 0)
+    if (--_locksCount == 0)
       onUnlock?.call();
   }
 }
