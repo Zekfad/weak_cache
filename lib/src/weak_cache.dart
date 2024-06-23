@@ -92,16 +92,37 @@ class WeakCache<K, V extends Object> with MapBase<K, V> implements Map<K, V> {
   }
 
   @override
-  bool get isNotEmpty => _state.cache.isNotEmpty;
+  int get length => _state.cache.length;
 
   @override
   bool get isEmpty => _state.cache.isEmpty;
+
+  @override
+  bool get isNotEmpty => _state.cache.isNotEmpty;
 
   @override
   V? operator[](Object? key) => _state.cache[key]?.target;
 
   @override
   void operator[]=(K key, V value) => _state.add(key, value);
+
+  @override
+  V putIfAbsent(K key, V Function() ifAbsent) {
+    // This is needed, because `containsKey` is unreliable.
+    if (this[key] case final value?)
+      return value;
+    return this[key] = ifAbsent();
+  }
+
+  @override
+  V update(K key, V Function(V value) update, { V Function()? ifAbsent, }) {
+    // This is needed, because `containsKey` is unreliable.
+    if (this[key] case final value?)
+      return this[key] = update(value);
+    if (ifAbsent != null)
+      return this[key] = ifAbsent();
+    throw ArgumentError.value(key, 'key', 'Key not in map.');
+  }
 
   @override
   V? remove(Object? key) => _state.remove(key);

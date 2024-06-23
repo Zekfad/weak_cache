@@ -1,3 +1,13 @@
+## 2.1.3
+
+- Fix possible cast error in `update` and `putIfAbsent`.
+  > `MapBase` uses `containsKey` which is unreliable and creates data
+  > race (due to GC) between check and read.
+- Optimize `length`.
+  > `MapBase` uses `keys.length` which causes iteration and creation of
+  > strong snapshot.
+
+
 ## 2.1.2
 
 - Optimize cache entry removal performance.

@@ -1,5 +1,8 @@
 # Weak Cache
 
+[![pub package](https://img.shields.io/pub/v/weak_cache.svg)](https://pub.dev/packages/weak_cache)
+[![package publisher](https://img.shields.io/pub/publisher/weak_cache.svg)](https://pub.dev/packages/weak_cache/publisher)
+
 Weak cache is a `Map` implementation that uses `WeakReference`s for holding
 values and `Finalizer` to manage it's storage.
 
